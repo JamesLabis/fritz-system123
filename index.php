@@ -1,0 +1,40 @@
+<?php
+require_once __DIR__.'/config/config.php'; require_once __DIR__.'/includes/functions.php';
+$q=trim($_GET['q']??''); $category=(int)($_GET['category']??0); $sort=$_GET['sort']??'name'; $stockOnly=($_GET['stock']??'')==='1'; $minPrice=($_GET['min_price']??'')!==''?max(0,(float)$_GET['min_price']):null; $maxPrice=($_GET['max_price']??'')!==''?max(0,(float)$_GET['max_price']):null;
+$sorts=['price'=>'p.price ASC','name'=>'p.product_name ASC','newest'=>'p.date_added DESC']; if(!isset($sorts[$sort]))$sort='name';
+$sql='SELECT p.*,c.category_name FROM products p LEFT JOIN categories c ON c.category_id=p.category_id WHERE 1=1';$params=[];
+if($q!==''){$sql.=' AND (p.product_name LIKE ? OR p.description LIKE ? OR p.sku LIKE ?)';$params[]="%$q%";$params[]="%$q%";$params[]="%$q%";}
+if($category){$sql.=' AND p.category_id=?';$params[]=$category;} if($minPrice!==null){$sql.=' AND p.price>=?';$params[]=$minPrice;} if($maxPrice!==null){$sql.=' AND p.price<=?';$params[]=$maxPrice;} if($stockOnly)$sql.=' AND p.stock_quantity>0';
+$sql.=' ORDER BY '.$sorts[$sort];$stmt=$pdo->prepare($sql);$stmt->execute($params);$products=$stmt->fetchAll();
+$categories=$pdo->query("SELECT c.*,COUNT(p.product_id) n,(SELECT cp.image FROM products cp WHERE cp.category_id=c.category_id AND cp.image IS NOT NULL AND cp.image<>'' ORDER BY cp.product_id DESC LIMIT 1) category_image FROM categories c LEFT JOIN products p ON p.category_id=c.category_id GROUP BY c.category_id ORDER BY c.category_name")->fetchAll();
+$pageTitle='Hardware Products';require __DIR__.'/includes/header.php';
+?>
+<section class="hero"><div><span class="eyebrow">Construction · Hardware · Tools</span><h1>Build it right with <em>BuildSmart</em></h1><p>Cement, steel, paint, wiring, plumbing and hand tools — browse live stock, order online and track every delivery.</p><form class="searchbar" method="get"><input name="q" placeholder="Search hardware products..." value="<?= e($q) ?>"><?php if($category):?><input type="hidden" name="category" value="<?= $category ?>"><?php endif;?><button class="btn btn-primary">Search</button></form><?php if(is_admin()):?><a class="btn btn-outline u-on-dark" href="<?= BASE_URL ?>/admin/products.php">Manage Products</a><?php endif;?></div><div class="hero-art"><?=str_replace('class="art"','class="art a1"',product_art('cement','Portland Cement 40kg'))?><?=str_replace('class="art"','class="art a2"',product_art('paint','Wall Paint','#2f7fd1'))?><?=str_replace('class="art"','class="art a3"',product_art('hammer','Claw Hammer'))?></div></section>
+<div class="trust-strip"><div><span class="trust-ico"><?=icon('box')?></span><b>Live stock</b><small>Updated inventory</small></div><div><span class="trust-ico"><?=icon('card')?></span><b>COD or online</b><small>Flexible payment</small></div><div><span class="trust-ico"><?=icon('receipt')?></span><b>Digital receipt</b><small>Order documentation</small></div><div><span class="trust-ico"><?=icon('truck')?></span><b>Order tracking</b><small>Follow each update</small></div></div>
+<h2 class="section-title" id="categories">Shop by category</h2>
+<div class="category-grid">
+<?php foreach($categories as $c):
+    $kind=product_kind($c['category_name'],'');
+    $categoryImage=trim((string)($c['category_image']??''));
+    $categoryImageUrl=product_image_url(['image'=>$categoryImage]);
+    $hasCategoryImage=$categoryImageUrl!==null;
+    $categoryCount=(int)$c['n'];
+?>
+<a class="category-tile" href="<?=BASE_URL?>/?category=<?=(int)$c['category_id']?>" aria-label="Browse <?=e($c['category_name'])?>, <?=$categoryCount?> product<?= $categoryCount===1?'':'s' ?>">
+    <span>
+        <?php if($hasCategoryImage): ?>
+            <img loading="lazy" src="<?=e($categoryImageUrl)?>" alt="" aria-hidden="true">
+        <?php else: ?>
+            <?=str_replace('role="img" aria-label="'.e(mb_strimwidth($c['category_name'],0,24,'…')).'"','aria-hidden="true"',product_art($kind,''))?>
+        <?php endif; ?>
+    </span>
+    <b><?=e($c['category_name'])?></b>
+    <small><?=$categoryCount?> product<?= $categoryCount===1?'':'s' ?></small>
+</a>
+<?php endforeach; ?>
+</div>
+<div class="chips"><a class="chip <?= !$category?'on':'' ?>" href="<?=BASE_URL?>/">All categories</a><?php foreach($categories as $c):?><a class="chip <?=$category===(int)$c['category_id']?'on':''?>" href="<?=BASE_URL?>/?category=<?=$c['category_id']?><?= $q!==''?'&q='.urlencode($q):'' ?>"><?=e($c['category_name'])?><small><?=(int)$c['n']?></small></a><?php endforeach;?></div>
+<section class="catalog-heading" id="browse-products"><div><span class="catalog-kicker">BUILDSMART CATALOG</span><h2>Browse Products</h2><p>Find the materials, supplies, and tools you need for your next project.</p></div><a class="catalog-reset" href="<?=BASE_URL?>/">View all products <span aria-hidden="true">→</span></a></section>
+<form class="catalog-tools" method="get"><?php if($q!==''):?><input type="hidden" name="q" value="<?=e($q)?>"><?php endif;?><?php if($category):?><input type="hidden" name="category" value="<?=$category?>"><?php endif;?><label>Min ₱ <input type="number" min="0" step=".01" name="min_price" value="<?=e((string)($_GET['min_price']??''))?>" class="u-w-100"></label><label>Max ₱ <input type="number" min="0" step=".01" name="max_price" value="<?=e((string)($_GET['max_price']??''))?>" class="u-w-100"></label><label>Sort by <select name="sort" onchange="this.form.submit()"><option value="name" <?=$sort==='name'?'selected':''?>>Name</option><option value="price" <?=$sort==='price'?'selected':''?>>Price: low to high</option><option value="newest" <?=$sort==='newest'?'selected':''?>>Newest</option></select></label><label class="stock-toggle"><input type="checkbox" name="stock" value="1" <?=$stockOnly?'checked':''?> onchange="this.form.submit()"> In stock only</label><strong><?=count($products)?> product<?=count($products)===1?'':'s'?></strong></form>
+<?php if(!$products):?><div class="card empty state-empty"><?=empty_art('No products found')?> <h2>No matching products</h2><p>Try another search or browse all hardware products.</p><a class="btn btn-primary" href="<?=BASE_URL?>/">Clear filters</a></div><?php else:?><div class="grid product-grid" id="products"><?php foreach($products as $p):$href=BASE_URL.'/product.php?id='.(int)$p['product_id'];?><article class="card product-card"><a class="product-art" href="<?=$href?>"><?=product_visual($p)?><span class="tag"><?=e($p['category_name']??'Uncategorized')?></span><?php $sq=(int)$p['stock_quantity'];if($sq<=0):?><span class="stock-flag out"><?=icon('alert')?>Out of stock</span><?php elseif($sq<=10):?><span class="stock-flag"><?=icon('alert')?>Only <?=$sq?> left</span><?php endif;?></a><div class="product-info"><h3><a href="<?=$href?>"><?=e($p['product_name'])?></a></h3><p class="muted small clamp"><?=e($p['description']??'')?></p><div class="buy"><div class="price"><?=money($p['price'])?> <span class="unit">/ <?=e($p['unit'])?></span></div><?=stock_badge((int)$p['stock_quantity'])?></div><?php if(current_user_id()&&$p['stock_quantity']>0):?><form method="post" action="<?=BASE_URL?>/cart.php"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="add"><input type="hidden" name="product_id" value="<?=$p['product_id']?>"><input type="hidden" name="quantity" value="1"><button class="btn btn-primary btn-block">Add to Cart</button></form><?php elseif(!is_logged_in()):?><a class="btn btn-outline btn-block" href="<?=BASE_URL?>/login.php">Login to order</a><?php elseif(is_admin()):?><a class="btn btn-outline btn-block" href="<?=BASE_URL?>/admin/products.php?edit=<?=$p['product_id']?>">Edit product</a><?php else:?><button class="btn btn-outline btn-block" disabled>Out of stock</button><?php endif;?></div></article><?php endforeach;?></div><?php endif;?>
+<?php require __DIR__.'/includes/footer.php'; ?>

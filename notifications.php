@@ -1,0 +1,9 @@
+<?php
+require_once __DIR__.'/config/config.php';require_once __DIR__.'/includes/functions.php';require_login();if(!current_user_id())redirect('/login.php');
+if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$id=(int)($_POST['notification_id']??0);$s=$pdo->prepare('UPDATE customer_notifications SET is_read=1 WHERE notification_id=? AND user_id=?');$s->execute([$id,current_user_id()]);redirect('/notifications.php');}
+$s=$pdo->prepare('SELECT * FROM customer_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100');$s->execute([current_user_id()]);$rows=$s->fetchAll();
+$pageTitle='Notifications';require __DIR__.'/includes/header.php';
+?>
+<div class="page-head"><div><h1>Notifications</h1><p class="muted">Updates about your orders and purchases.</p></div></div>
+<div class="card"><?php if(!$rows):?><div class="state-empty"><?=empty_art('No notifications')?><h2>You're all caught up</h2><p class="muted">Order updates will appear here.</p></div><?php else:foreach($rows as $n):?><div class="history-entry"><span class="history-dot"></span><div class="u-grow"><b><?=e($n['title'])?></b> <?php if(!$n['is_read']):?><span class="pill pill-warn">New</span><?php endif;?><small><?=e($n['created_at'])?></small><p><?=e($n['message'])?></p><?php if($n['order_id']):?><a href="<?=BASE_URL?>/order_detail.php?id=<?=$n['order_id']?>">View order</a><?php endif;?><?php if(!$n['is_read']):?><form class="u-mt-8" method="post"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="notification_id" value="<?=$n['notification_id']?>"><button class="btn btn-outline btn-sm">Mark as read</button></form><?php endif;?></div></div><?php endforeach;endif;?></div>
+<?php require __DIR__.'/includes/footer.php'; ?>

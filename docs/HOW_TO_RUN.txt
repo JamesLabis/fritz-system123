@@ -1,0 +1,44 @@
+HOW TO RUN BUILDSMART (XAMPP)
+1. Start XAMPP Control Panel -> Start Apache and MySQL.
+2. Copy the BuildSmart folder to C:\xampp\htdocs\  (final path: C:\xampp\htdocs\BuildSmart\index.php)
+3. Open http://localhost/phpmyadmin -> Import tab -> choose database/buildsmart.sql -> Go.
+   (It creates the "buildsmart" database, all tables, categories, products and the admin account.)
+4. Open http://localhost/BuildSmart/
+5. Admin login: http://localhost/BuildSmart/login.php -> Account type "Administrator"
+   Username: admin   Password: admin123
+6. Customer: click Register, create an account, then log in as Customer.
+If MySQL has a password: edit config/config.php (DB_USER / DB_PASS).
+
+
+PRODUCT PHOTOS
+- Open Admin > Products to add or edit hardware items.
+- Upload a clear front photo; an optional side/back photo can also be added.
+- JPG, PNG and WebP are accepted. Each image must be 2 MB or smaller.
+- The system creates a unique filename and stores it in the uploads/ folder.
+- Alt text is saved for accessibility; if left blank, a description is generated from the product name.
+- A built-in “No image available” placeholder is shown when no front photo is uploaded.
+- Existing databases are upgraded automatically when config/config.php connects successfully.
+
+
+SCHEDULED CLEANUP (releases stock held by unpaid orders)
+Unpaid Pending orders are auto-cancelled after 24 hours (setting "pending_order_hours") and their reserved stock is
+returned. The admin dashboard shows "Scheduled cleanup has not run" until this has happened at least once, and again
+if it stops for more than 6 hours.
+
+Automatic fallback: while the website is being used, the cleanup runs by itself at most once an hour, so the warning
+clears on its own after the first visit. For reliable timing (quiet nights, no visitors) also set up the scheduler:
+
+Windows (XAMPP) - easiest:
+  Right-click cron\install_windows_task.bat -> Run as administrator. It creates a task that runs every 30 minutes.
+  (Edit the two paths at the top of that file if XAMPP or the project are in a different folder.)
+
+Windows - manual:
+  Task Scheduler -> Create Basic Task -> Trigger: Daily, then in the task's Triggers tab set "Repeat task every 30 minutes".
+  Action: Start a program
+    Program:   C:\xampp\php\php.exe
+    Arguments: C:\xampp\htdocs\BuildSmart\cron\release_stale_orders.php
+
+Linux (crontab -e):
+  0,30 * * * * php /var/www/BuildSmart/cron/release_stale_orders.php
+
+Test it by running the same command by hand; it prints "Cancelled N stale order(s)." and the dashboard warning disappears.

@@ -1,0 +1,44 @@
+BUILDSMART — ORDER-TO-DELIVERY WORKFLOW
+
+STEP BY STEP
+1. Customer places an order            Status: Pending. Stock is reserved. Receipt and notification are created.
+2. Admin reviews (Order Management)    Confirm, or Cancel with a reason.
+   - Online Payment orders: open the order and use "Verify online payment" (enter the reference you checked
+     in your bank / e-wallet). The order cannot be prepared until this is done.
+3. Admin prepares                      Status: Preparing.
+4. Admin assigns a driver              Delivery Management > To assign > Assign driver (driver + date + notes).
+                                       Status: Ready for Delivery. Customer is notified of driver and date.
+                                       (Edit driver/date any time while the delivery is still "Assigned".)
+5. Admin dispatches                    Dispatch. Status: Out for Delivery. For Cash on Delivery the customer is told
+                                       the amount to prepare.
+6. Proof of delivery                   Mark delivered: enter who received it. For Cash on Delivery enter the cash
+                                       collected (must equal the order total). Order becomes Completed and the COD
+                                       payment becomes Paid.
+   OR Delivery failed                  Failed: enter the reason. The order returns to "To assign" (Ready for Delivery)
+                                       and can be rescheduled with the same or another driver. Stock stays reserved.
+   Every attempt is kept (Order > Delivery table).
+
+ALLOWED ORDER STATUS MOVES (enforced on the server)
+  Pending            -> Confirmed, Cancelled
+  Confirmed          -> Preparing, Cancelled
+  Preparing          -> Ready for Delivery (by assigning a driver), Cancelled
+  Ready for Delivery -> Out for Delivery (by dispatching), Cancelled
+  Out for Delivery   -> Completed (by proof of delivery), Ready for Delivery (failed delivery), Cancelled
+  Completed / Cancelled -> final
+The Orders page only offers Confirmed, Preparing and Cancelled. The delivery steps are done in Delivery Management
+because they need a driver, a date and proof.
+
+CANCELLING
+- Stock is returned exactly once. Any open delivery for the order is cancelled.
+- Unpaid orders: payment becomes Failed.
+- Already-paid orders (verified online payments): tick "Mark payment as refunded". Payment becomes Refunded.
+  The system does not send money back; refund the customer yourself.
+
+AUDIT LOG
+Admin > Activity Logs records: logins and failed admin logins, order status changes, payment verification,
+delivery assign / edit / dispatch / complete / failed, driver changes, stock changes, product create/update/delete,
+settings and password changes, CSV exports.
+
+NOT INCLUDED
+Live GPS tracking, route optimisation, SMS/e-mail sending, a driver login or mobile app, supplier records and purchase
+orders. Notifications are in-app only.
